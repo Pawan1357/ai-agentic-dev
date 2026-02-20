@@ -1,6 +1,5 @@
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { Subject, switchMap, takeUntil } from 'rxjs';
-import { AuditChange, AuditLogEntry } from '../../core/models/property.model';
 import { PropertyStoreService } from '../../core/state/property-store.service';
 import { extractErrorMessage } from '../../core/utils/http-error.util';
 
@@ -185,27 +184,4 @@ export class ShellComponent implements OnInit, OnDestroy {
     }, 4500);
   }
 
-  formatAuditChange(change: AuditChange): string {
-    const oldValue = this.stringifyAuditValue(change.oldValue);
-    const newValue = this.stringifyAuditValue(change.newValue);
-    return `${change.field}: ${oldValue} -> ${newValue}`;
-  }
-
-  trackByAuditLog(_index: number, item: AuditLogEntry): string {
-    return `${item.version}-${item.revision}-${item.createdAt}`;
-  }
-
-  private stringifyAuditValue(value: unknown): string {
-    if (value === null || typeof value === 'undefined') {
-      return 'null';
-    }
-    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-      return String(value);
-    }
-    try {
-      return JSON.stringify(value);
-    } catch {
-      return '[unserializable]';
-    }
-  }
 }

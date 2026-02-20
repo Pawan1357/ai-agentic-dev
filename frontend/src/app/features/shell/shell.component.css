@@ -1,9 +1,9 @@
 :host {
-  --bg: #eef1f6;
-  --surface: #ffffff;
-  --line: #d9e0ea;
-  --text: #243047;
-  --muted: #5d6b82;
+  --bg: var(--bg-canvas);
+  --surface: var(--surface);
+  --line: var(--line-subtle);
+  --text: var(--text-primary);
+  --muted: var(--text-secondary);
   --primary: #1e88ff;
   display: block;
 }
@@ -12,11 +12,10 @@
   min-height: 100vh;
   background: linear-gradient(180deg, #f6f8fc, var(--bg));
   color: var(--text);
-  font-family: "Segoe UI", "Helvetica Neue", sans-serif;
 }
 
 .topbar {
-  padding: 14px 20px;
+  padding: 16px 24px;
   border-bottom: 1px solid var(--line);
   background: var(--surface);
   display: flex;
@@ -33,36 +32,39 @@
   text-decoration: none;
   color: var(--muted);
   font-weight: 600;
-  padding-bottom: 8px;
+  font-size: 16px;
+  padding-bottom: 10px;
+  letter-spacing: 0.01em;
 }
 
 .tabs a.active {
   color: var(--primary);
-  border-bottom: 2px solid var(--primary);
+  border-bottom: 3px solid var(--primary);
 }
 
 .actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 select,
 .btn {
   border: 1px solid var(--line);
   background: var(--surface);
-  padding: 8px 12px;
-  border-radius: 6px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  font-size: 14px;
 }
 
 .version-select {
-  min-width: 150px;
+  min-width: 170px;
   font-weight: 600;
   color: var(--text);
-  border-color: #c9d4e4;
+  border-color: var(--line-strong);
   background: linear-gradient(180deg, #ffffff, #f7faff);
-  padding-right: 12px;
+  padding-right: 14px;
   appearance: auto;
 }
 
@@ -96,10 +98,10 @@ select,
 .error-banner,
 .success-banner,
 .validation-banner {
-  margin: 12px 16px 0;
-  padding: 10px 12px;
-  border-radius: 6px;
-  font-size: 13px;
+  margin: 14px 20px 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
 }
 
 .error-banner {
@@ -121,7 +123,7 @@ select,
 }
 
 main {
-  padding: 16px;
+  padding: 20px;
 }
 
 .loading-shell {
@@ -132,51 +134,5 @@ main {
 
 .loading-text {
   color: var(--muted);
-  font-size: 14px;
-}
-
-.history-card {
-  margin: 0 16px 16px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface);
-  padding: 14px;
-}
-
-.history-card h3 {
-  margin: 0 0 10px;
-}
-
-.history-empty {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.history-table-wrap {
-  overflow: auto;
-}
-
-.history-card table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 760px;
-}
-
-.history-card th,
-.history-card td {
-  border-bottom: 1px solid var(--line);
-  text-align: left;
-  padding: 8px;
-  font-size: 12px;
-  vertical-align: top;
-}
-
-.history-card th {
-  background: #f7faff;
-  font-weight: 600;
-}
-
-.changes-cell div {
-  white-space: pre-wrap;
-  margin-bottom: 4px;
+  font-size: 15px;
 }
