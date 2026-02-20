@@ -1,0 +1,39 @@
+<div class="app-shell" *ngIf="store.property$ | async as property">
+  <header class="topbar">
+    <nav class="tabs">
+      <a routerLink="/property-details" routerLinkActive="active">Property Details</a>
+      <a routerLink="/underwriting" routerLinkActive="active">Underwriting</a>
+    </nav>
+
+    <div class="actions">
+      <select class="version-select" [value]="property.version" (change)="onVersionChange($any($event.target).value, $event)">
+        <option *ngFor="let item of store.versions$ | async" [value]="item.version">
+          {{ item.version }}{{ item.isHistorical ? ' (Historical)' : '' }}
+        </option>
+      </select>
+      <button type="button" class="btn btn-primary" [disabled]="property.isHistorical || !(store.isDirty$ | async)" (click)="onSave()">Save</button>
+      <button type="button" class="btn btn-soft" [disabled]="property.isHistorical || !(store.isDirty$ | async)" (click)="onSaveAs()">Save As</button>
+    </div>
+  </header>
+
+  <section class="error-banner" *ngIf="errorMessage">
+    {{ errorMessage }}
+  </section>
+
+  <section class="success-banner" *ngIf="successMessage">
+    {{ successMessage }}
+  </section>
+
+  <section class="validation-banner" *ngIf="validationErrors.length > 0">
+    <div *ngFor="let error of validationErrors">{{ error }}</div>
+  </section>
+
+  <main>
+    <router-outlet></router-outlet>
+  </main>
+</div>
+
+<div class="app-shell loading-shell" *ngIf="!(store.property$ | async)">
+  <section class="error-banner" *ngIf="errorMessage">{{ errorMessage }}</section>
+  <section class="loading-text" *ngIf="!errorMessage">Loading property data...</section>
+</div>

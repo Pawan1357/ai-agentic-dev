@@ -1,0 +1,112 @@
+<section class="details-layout" *ngIf="store.property$ | async as property">
+  <section class="card left-card">
+    <div class="map-placeholder">Map</div>
+    <h3 class="address">{{ property.propertyDetails.address }}</h3>
+
+    <div class="kv" *ngFor="let item of leftInfoFields">
+      <label>{{ item.label }}</label>
+      <input
+        [type]="getFieldInputType(item.key)"
+        [value]="property.propertyDetails[item.key]"
+        [class.invalid-field]="!!getPropertyFieldError(item.key)"
+        [disabled]="item.key === 'address' || property.isHistorical"
+        (input)="onDetailFieldChange(item.key, $event)"
+      />
+      <div class="field-error" *ngIf="getPropertyFieldError(item.key)">{{ getPropertyFieldError(item.key) }}</div>
+    </div>
+  </section>
+
+  <section class="middle-column">
+    <section class="card">
+      <h3>Listing Details</h3>
+      <div class="kv" *ngFor="let item of listingFields">
+        <label>{{ item.label }}</label>
+        <input [type]="getFieldInputType(item.key)" [value]="property.propertyDetails[item.key]" [class.invalid-field]="!!getPropertyFieldError(item.key)" [disabled]="property.isHistorical" (input)="onDetailFieldChange(item.key, $event)" />
+        <div class="field-error" *ngIf="getPropertyFieldError(item.key)">{{ getPropertyFieldError(item.key) }}</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <h3>Broker Info</h3>
+        <button type="button" class="btn btn-soft" [disabled]="!store.canAddBrokerOrTenant()" (click)="onAddBroker()">+ Add</button>
+      </div>
+      <div class="inline-error" *ngIf="actionError">{{ actionError }}</div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>Company</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let broker of property.brokers; let brokerIndex = index; trackBy: trackByBrokerId">
+            <ng-container *ngIf="!broker.isDeleted">
+              <td>
+                <input [value]="broker.name" [class.invalid-field]="!!getBrokerFieldErrorAtIndex(brokerIndex, 'name')" [disabled]="property.isHistorical" (input)="onBrokerFieldChangeWithIndex(broker, brokerIndex, 'name', $event)" />
+                <div class="field-error" *ngIf="getBrokerFieldErrorAtIndex(brokerIndex, 'name')">{{ getBrokerFieldErrorAtIndex(brokerIndex, 'name') }}</div>
+              </td>
+              <td>
+                <input type="tel" [value]="broker.phone" [class.invalid-field]="!!getBrokerFieldErrorAtIndex(brokerIndex, 'phone')" [disabled]="property.isHistorical" (input)="onBrokerFieldChangeWithIndex(broker, brokerIndex, 'phone', $event)" />
+                <div class="field-error" *ngIf="getBrokerFieldErrorAtIndex(brokerIndex, 'phone')">{{ getBrokerFieldErrorAtIndex(brokerIndex, 'phone') }}</div>
+              </td>
+              <td>
+                <input type="email" [value]="broker.email" [class.invalid-field]="!!getBrokerFieldErrorAtIndex(brokerIndex, 'email')" [disabled]="property.isHistorical" (input)="onBrokerFieldChangeWithIndex(broker, brokerIndex, 'email', $event)" />
+                <div class="field-error" *ngIf="getBrokerFieldErrorAtIndex(brokerIndex, 'email')">{{ getBrokerFieldErrorAtIndex(brokerIndex, 'email') }}</div>
+              </td>
+              <td>
+                <input [value]="broker.company" [class.invalid-field]="!!getBrokerFieldErrorAtIndex(brokerIndex, 'company')" [disabled]="property.isHistorical" (input)="onBrokerFieldChangeWithIndex(broker, brokerIndex, 'company', $event)" />
+                <div class="field-error" *ngIf="getBrokerFieldErrorAtIndex(brokerIndex, 'company')">{{ getBrokerFieldErrorAtIndex(brokerIndex, 'company') }}</div>
+              </td>
+              <td class="actions-cell">
+                <button type="button" class="btn btn-primary" [disabled]="!store.canSaveBroker(broker.id)" (click)="onSaveBroker(broker.id)">Save</button>
+                <button type="button" class="btn btn-danger" [disabled]="!store.canDeleteBroker(broker.id)" (click)="onDeleteBroker(broker.id)">Delete</button>
+              </td>
+            </ng-container>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </section>
+
+  <section class="card right-card">
+    <h3>Property Specs</h3>
+    <div class="kv" *ngFor="let item of specsFields">
+      <label>{{ item.label }}</label>
+      <input [type]="getFieldInputType(item.key)" [value]="property.propertyDetails[item.key]" [class.invalid-field]="!!getPropertyFieldError(item.key)" [disabled]="property.isHistorical" (input)="onDetailFieldChange(item.key, $event)" />
+      <div class="field-error" *ngIf="getPropertyFieldError(item.key)">{{ getPropertyFieldError(item.key) }}</div>
+    </div>
+  </section>
+</section>
+
+<section class="card lease-card" *ngIf="store.property$ | async as property">
+  <h3>Lease Abstract</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Tenant</th>
+        <th>Credit Type</th>
+        <th>SF Occupied</th>
+        <th>Rent PSF</th>
+        <th>Annual Escalations</th>
+        <th>Lease End</th>
+        <th>Lease Type</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let tenant of property.tenants">
+        <td>{{ tenant.tenantName }}</td>
+        <td>{{ tenant.creditType }}</td>
+        <td>{{ tenant.squareFeet }}</td>
+        <td>{{ tenant.rentPsf }}</td>
+        <td>{{ tenant.annualEscalations }}%</td>
+        <td>{{ tenant.leaseEnd | date: 'M/d/y' }}</td>
+        <td>{{ tenant.leaseType }}</td>
+      </tr>
+    </tbody>
+  </table>
+</section>

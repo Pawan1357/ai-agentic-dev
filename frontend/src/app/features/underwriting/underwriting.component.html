@@ -1,0 +1,144 @@
+<section class="card" *ngIf="store.property$ | async as property">
+  <div class="section-head">
+    <h2>Inputs</h2>
+  </div>
+
+  <div class="assumptions-grid">
+    <div class="field" *ngFor="let field of assumptionsFields">
+      <label>{{ field.label }}</label>
+      <input
+        [type]="field.type"
+        [value]="property.underwritingInputs[field.key]"
+        [class.invalid-field]="!!getUnderwritingFieldError(field.key)"
+        [disabled]="property.isHistorical"
+        (input)="onUnderwritingFieldChange(field.key, $event)"
+      />
+      <div class="field-error" *ngIf="getUnderwritingFieldError(field.key)">{{ getUnderwritingFieldError(field.key) }}</div>
+    </div>
+  </div>
+</section>
+
+<section class="card" *ngIf="store.property$ | async as property">
+  <div class="section-head">
+    <h2>Tenants</h2>
+    <button type="button" class="btn btn-soft" [disabled]="!store.canAddBrokerOrTenant()" (click)="onAddTenant()">Add Tenant</button>
+  </div>
+  <div class="inline-error" *ngIf="actionError">{{ actionError }}</div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Tenant Name</th>
+          <th>Credit Type</th>
+          <th>Sq Feet</th>
+          <th>Rent PSF</th>
+          <th>Ann. Esc</th>
+          <th>Lease Start</th>
+          <th>Lease End</th>
+          <th>Lease Type</th>
+          <th>Renew</th>
+          <th>Downtime</th>
+          <th>TI PSF</th>
+          <th>LC PSF</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let tenant of property.tenants; let tenantIndex = index; trackBy: trackByTenantId">
+          <ng-container *ngIf="!tenant.isDeleted || tenant.isVacant">
+            <td>
+              <input
+                [disabled]="property.isHistorical || tenant.isVacant || tenant.isDeleted"
+                [value]="tenant.tenantName"
+                [class.invalid-field]="!!getTenantFieldError(tenantIndex, 'tenantName')"
+                (input)="onTenantFieldChange(tenant, tenantIndex, 'tenantName', $event)"
+              />
+              <div class="field-error" *ngIf="getTenantFieldError(tenantIndex, 'tenantName')">{{ getTenantFieldError(tenantIndex, 'tenantName') }}</div>
+            </td>
+            <td>
+              <select
+                [disabled]="property.isHistorical || tenant.isVacant || tenant.isDeleted"
+                [value]="tenant.creditType"
+                [class.invalid-field]="!!getTenantFieldError(tenantIndex, 'creditType')"
+                (change)="onTenantFieldChange(tenant, tenantIndex, 'creditType', $event)"
+              >
+                <option>National</option>
+                <option>Regional</option>
+                <option>Local</option>
+                <option>N/A</option>
+              </select>
+              <div class="field-error" *ngIf="getTenantFieldError(tenantIndex, 'creditType')">{{ getTenantFieldError(tenantIndex, 'creditType') }}</div>
+            </td>
+            <td>
+              <input [disabled]="property.isHistorical || tenant.isVacant || tenant.isDeleted" [class.invalid-field]="!!getTenantFieldError(tenantIndex, 'squareFeet')" type="number" [value]="tenant.squareFeet" (input)="onTenantFieldChange(tenant, tenantIndex, 'squareFeet', $event)" />
+              <div class="field-error" *ngIf="getTenantFieldError(tenantIndex, 'squareFeet')">{{ getTenantFieldError(tenantIndex, 'squareFeet') }}</div>
+            </td>
+            <td>
+              <input [disabled]="property.isHistorical || tenant.isVacant || tenant.isDeleted" [class.invalid-field]="!!getTenantFieldError(tenantIndex, 'rentPsf')" type="number" [value]="tenant.rentPsf" (input)="onTenantFieldChange(tenant, tenantIndex, 'rentPsf', $event)" />
+              <div class="field-error" *ngIf="getTenantFieldError(tenantIndex, 'rentPsf')">{{ getTenantFieldError(tenantIndex, 'rentPsf') }}</div>
+            </td>
+            <td>
+              <input [disabled]="property.isHistorical || tenant.isVacant || tenant.isDeleted" [class.invalid-field]="!!getTenantFieldError(tenantIndex, 'annualEscalations')" type="number" [value]="tenant.annualEscalations" (input)="onTenantFieldChange(tenant, tenantIndex, 'annualEscalations', $event)" />
+              <div class="field-error" *ngIf="getTenantFieldError(tenantIndex, 'annualEscalations')">{{ getTenantFieldError(tenantIndex, 'annualEscalations') }}</div>
+            </td>
+            <td>
+              <input [disabled]="property.isHistorical || tenant.isVacant || tenant.isDeleted" [class.invalid-field]="!!getTenantFieldError(tenantIndex, 'leaseStart')" type="date" [value]="tenant.leaseStart | date : 'yyyy-MM-dd'" (input)="onTenantFieldChange(tenant, tenantIndex, 'leaseStart', $event)" />
+              <div class="field-error" *ngIf="getTenantFieldError(tenantIndex, 'leaseStart')">{{ getTenantFieldError(tenantIndex, 'leaseStart') }}</div>
+            </td>
+            <td>
+              <input [disabled]="property.isHistorical || tenant.isVacant || tenant.isDeleted" [class.invalid-field]="!!getTenantFieldError(tenantIndex, 'leaseEnd')" type="date" [value]="tenant.leaseEnd | date : 'yyyy-MM-dd'" (input)="onTenantFieldChange(tenant, tenantIndex, 'leaseEnd', $event)" />
+              <div class="field-error" *ngIf="getTenantFieldError(tenantIndex, 'leaseEnd')">{{ getTenantFieldError(tenantIndex, 'leaseEnd') }}</div>
+            </td>
+            <td>
+              <select
+                [disabled]="property.isHistorical || tenant.isVacant || tenant.isDeleted"
+                [value]="tenant.leaseType"
+                [class.invalid-field]="!!getTenantFieldError(tenantIndex, 'leaseType')"
+                (change)="onTenantFieldChange(tenant, tenantIndex, 'leaseType', $event)"
+              >
+                <option>NNN</option>
+                <option>Gross</option>
+                <option>Modified Gross</option>
+                <option>N/A</option>
+              </select>
+              <div class="field-error" *ngIf="getTenantFieldError(tenantIndex, 'leaseType')">{{ getTenantFieldError(tenantIndex, 'leaseType') }}</div>
+            </td>
+            <td>
+              <select
+                [disabled]="property.isHistorical || tenant.isVacant || tenant.isDeleted"
+                [value]="tenant.renew"
+                [class.invalid-field]="!!getTenantFieldError(tenantIndex, 'renew')"
+                (change)="onTenantFieldChange(tenant, tenantIndex, 'renew', $event)"
+              >
+                <option>Yes</option>
+                <option>No</option>
+                <option>Maybe</option>
+                <option>N/A</option>
+              </select>
+              <div class="field-error" *ngIf="getTenantFieldError(tenantIndex, 'renew')">{{ getTenantFieldError(tenantIndex, 'renew') }}</div>
+            </td>
+            <td>
+              <input [disabled]="property.isHistorical || tenant.isVacant || tenant.isDeleted" [class.invalid-field]="!!getTenantFieldError(tenantIndex, 'downtimeMonths')" type="number" [value]="tenant.downtimeMonths" (input)="onTenantFieldChange(tenant, tenantIndex, 'downtimeMonths', $event)" />
+              <div class="field-error" *ngIf="getTenantFieldError(tenantIndex, 'downtimeMonths')">{{ getTenantFieldError(tenantIndex, 'downtimeMonths') }}</div>
+            </td>
+            <td>
+              <input [disabled]="property.isHistorical || tenant.isVacant || tenant.isDeleted" [class.invalid-field]="!!getTenantFieldError(tenantIndex, 'tiPsf')" type="number" [value]="tenant.tiPsf" (input)="onTenantFieldChange(tenant, tenantIndex, 'tiPsf', $event)" />
+              <div class="field-error" *ngIf="getTenantFieldError(tenantIndex, 'tiPsf')">{{ getTenantFieldError(tenantIndex, 'tiPsf') }}</div>
+            </td>
+            <td>
+              <input [disabled]="property.isHistorical || tenant.isVacant || tenant.isDeleted" [class.invalid-field]="!!getTenantFieldError(tenantIndex, 'lcPsf')" type="number" [value]="tenant.lcPsf" (input)="onTenantFieldChange(tenant, tenantIndex, 'lcPsf', $event)" />
+              <div class="field-error" *ngIf="getTenantFieldError(tenantIndex, 'lcPsf')">{{ getTenantFieldError(tenantIndex, 'lcPsf') }}</div>
+            </td>
+            <td>
+              <div class="actions-cell">
+                <button type="button" class="btn btn-primary" [disabled]="!store.canSaveTenant(tenant.id)" (click)="onSaveTenant(tenant.id)">Save</button>
+                <button type="button" class="btn btn-danger" [disabled]="!store.canDeleteTenant(tenant.id)" (click)="onDeleteTenant(tenant.id)">Delete</button>
+              </div>
+            </td>
+          </ng-container>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>

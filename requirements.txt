@@ -1,0 +1,47 @@
+Build a small MEAN stack application with two tabs: Property Details and Underwriting. Both tabs operate on the same property and must share data.
+
+What We Want To Evaluate:-
+Application architecture
+State management across tabs
+API design
+Validation and edge cases
+User experience
+
+Property Details Tab:-
+Fetch property data from the API.
+All fields are editable except Property address.
+The Broker section supports add, edit, and delete.
+Show tenants in a read-only Lease Abstract.
+Provide two actions:
+Save → update existing record.
+Save As → create a new version of the property.
+
+Underwriting Tab:-
+Manage tenants (add/edit/delete).
+Based on the available space, an auto-populated row should have the vacant space information.
+Total Square footage must be less than or equal to the property space.
+Lease Start cannot be before the property start.
+Lease End cannot exceed start + hold period.
+Changes should reflect in Property Details automatically.
+
+Important Behavior:-
+Switching tabs must not lose unsaved edits.
+Save should send data from both tabs in one request.
+If the user tries to leave with unsaved changes, show a warning.
+Need to manage the change history in a separate table with logs on how many fields are updated with old and new values.
+All inputs should be properly validated.
+
+Backend:-
+Create APIs for:
+You can add static JSON in database for Property.
+Get property
+Save Property
+Save As Property
+Broker and tenant operations
+
+What To Submit:-
+Source code
+README with setup steps and assumptions
+API document
+
+Focus on clean design over completeness.

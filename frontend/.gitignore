@@ -1,0 +1,10 @@
+# Dependencies
+node_modules/
+
+# Build and test outputs
+dist/
+coverage/
+.angular/
+
+# Env
+.env
