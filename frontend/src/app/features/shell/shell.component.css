@@ -136,3 +136,62 @@ main {
   color: var(--muted);
   font-size: 15px;
 }
+
+@media (max-width: 1024px) {
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 18px;
+  }
+
+  .actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .version-select {
+    min-width: 220px;
+  }
+
+  main {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .tabs {
+    width: 100%;
+    gap: 14px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .tabs a {
+    white-space: nowrap;
+    font-size: 15px;
+    padding-bottom: 8px;
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .version-select,
+  .btn {
+    width: 100%;
+  }
+
+  .error-banner,
+  .success-banner,
+  .validation-banner {
+    margin: 12px 14px 0;
+    font-size: 13px;
+  }
+
+  main {
+    padding: 12px;
+  }
+}

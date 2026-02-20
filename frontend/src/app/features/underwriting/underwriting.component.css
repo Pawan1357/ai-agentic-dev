@@ -129,7 +129,51 @@ td {
 }
 
 @media (max-width: 768px) {
+  .card {
+    padding: 14px;
+  }
+
+  h2 {
+    font-size: 18px;
+  }
+
+  .section-head {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .section-head .btn {
+    width: 100%;
+  }
+
   .assumptions-grid {
     grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+
+  .actions-cell {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actions-cell .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .assumptions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  input,
+  select,
+  .btn {
+    width: 100%;
+  }
+
+  th,
+  td {
+    font-size: 12px;
+    padding: 8px 7px;
   }
 }
