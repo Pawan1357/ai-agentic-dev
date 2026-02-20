@@ -3,6 +3,13 @@ import { AppException } from '../exceptions/app.exception';
 import { ErrorResponse } from '../interfaces/api-response.interface';
 import { AppLoggerService } from '../logging/app-logger.service';
 
+type LoggedRequest = Request & {
+  url: string;
+  method: string;
+  headers?: Record<string, string | string[] | undefined>;
+  logRef?: string;
+};
+
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {
   constructor(private readonly logger: AppLoggerService) {}
@@ -10,9 +17,11 @@ export class ApiExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<{ status: (statusCode: number) => { json: (body: ErrorResponse) => void } }>();
-    const request = ctx.getRequest<Request & { url: string; method: string }>();
+    const request = ctx.getRequest<LoggedRequest>();
 
     const { statusCode, message, errorCode, details } = this.extractErrorInfo(exception);
+    const ref = this.resolveRequestRef(request);
+    request.logRef = ref;
 
     const errorBody: ErrorResponse = {
       success: false,
@@ -25,15 +34,17 @@ export class ApiExceptionFilter implements ExceptionFilter {
     };
 
     this.logger.error(
-      JSON.stringify({
-        type: 'outgoing_error_response',
+      {
+        event: 'HTTP_ERR',
+        message: 'Request failed',
+        ref,
         method: request.method,
         path: request.url,
         statusCode,
         errorCode,
-        message,
-        details,
-      }),
+      },
+      undefined,
+      'HTTP',
     );
 
     response.status(statusCode).json(errorBody);
@@ -100,5 +111,14 @@ export class ApiExceptionFilter implements ExceptionFilter {
     }
     const candidate = exception as { code?: unknown };
     return candidate.code === 11000;
+  }
+
+  private resolveRequestRef(request: LoggedRequest): string {
+    if (request.logRef) {
+      return request.logRef;
+    }
+    const headerValue = request.headers?.['x-request-id'];
+    const candidate = Array.isArray(headerValue) ? headerValue[0] : headerValue;
+    return this.logger.resolveReferenceId(candidate);
   }
 }

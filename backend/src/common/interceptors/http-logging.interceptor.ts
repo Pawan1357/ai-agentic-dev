@@ -3,40 +3,57 @@ import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { AppLoggerService } from '../logging/app-logger.service';
 
+type LoggedRequest = Request & {
+  method: string;
+  url: string;
+  headers: Record<string, string | string[] | undefined>;
+  logRef?: string;
+};
+
 @Injectable()
 export class HttpLoggingInterceptor implements NestInterceptor {
   constructor(private readonly logger: AppLoggerService) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const httpCtx = context.switchToHttp();
-    const request = httpCtx.getRequest<Request & { method: string; url: string; params: unknown; query: unknown; body: unknown }>();
+    const request = httpCtx.getRequest<LoggedRequest>();
     const response = httpCtx.getResponse<{ statusCode: number }>();
     const startedAt = Date.now();
+    const ref = this.resolveRequestRef(request);
+    request.logRef = ref;
 
     this.logger.log(
-      JSON.stringify({
-        type: 'incoming_request',
+      {
+        event: 'HTTP_REQ',
+        message: 'Incoming request',
+        ref,
         method: request.method,
         path: request.url,
-        params: request.params,
-        query: request.query,
-        body: request.body,
-      }),
+      },
+      'HTTP',
     );
 
     return next.handle().pipe(
-      tap((payload) => {
+      tap(() => {
         this.logger.log(
-          JSON.stringify({
-            type: 'outgoing_response',
+          {
+            event: 'HTTP_RES',
+            message: 'Request completed',
+            ref,
             method: request.method,
             path: request.url,
             statusCode: response.statusCode,
             durationMs: Date.now() - startedAt,
-            data: payload,
-          }),
+          },
+          'HTTP',
         );
       }),
     );
+  }
+
+  private resolveRequestRef(request: LoggedRequest): string {
+    const headerValue = request.headers?.['x-request-id'];
+    const candidate = Array.isArray(headerValue) ? headerValue[0] : headerValue;
+    return this.logger.resolveReferenceId(candidate);
   }
 }
