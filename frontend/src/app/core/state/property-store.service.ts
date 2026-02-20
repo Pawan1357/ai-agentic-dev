@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, map, of, switchMap, throwError, tap } from 'rxjs';
-import { AuditLogEntry, Broker, PropertyVersion, Tenant } from '../models/property.model';
+import { Broker, PropertyVersion, Tenant } from '../models/property.model';
 import { PropertyApiService } from '../services/property-api.service';
 import { extractBackendErrorInfo } from '../utils/http-error.util';
 import { validatePropertyDraft } from '../validators/property-validation.util';
@@ -18,14 +18,12 @@ export class PropertyStoreService {
 
   private readonly propertySubject = new BehaviorSubject<PropertyVersion | null>(null);
   private readonly versionsSubject = new BehaviorSubject<VersionOption[]>([]);
-  private readonly auditLogsSubject = new BehaviorSubject<AuditLogEntry[]>([]);
   private readonly dirtySubject = new BehaviorSubject<boolean>(false);
   private readonly validationErrorsSubject = new BehaviorSubject<string[]>([]);
   private readonly serverFieldErrorsSubject = new BehaviorSubject<Record<string, string>>({});
 
   readonly property$: Observable<PropertyVersion | null> = this.propertySubject.asObservable();
   readonly versions$: Observable<VersionOption[]> = this.versionsSubject.asObservable();
-  readonly auditLogs$: Observable<AuditLogEntry[]> = this.auditLogsSubject.asObservable();
   readonly isDirty$: Observable<boolean> = this.dirtySubject.asObservable();
   readonly validationErrors$: Observable<string[]> = this.validationErrorsSubject.asObservable();
   readonly serverFieldErrors$: Observable<Record<string, string>> = this.serverFieldErrorsSubject.asObservable();
@@ -34,24 +32,20 @@ export class PropertyStoreService {
 
   loadVersion(version = '1.1') {
     return this.api.getVersion(this.propertyId, version).pipe(
-      switchMap((property) => {
+      map((property) => {
         const normalized = this.normalizePropertySnapshot(property);
         this.persistedProperty = structuredClone(normalized);
         this.propertySubject.next(normalized);
         this.validationErrorsSubject.next([]);
         this.serverFieldErrorsSubject.next({});
         this.refreshDirtyState();
-        return this.loadAuditLogs(normalized.version).pipe(map(() => normalized));
+        return normalized;
       }),
     );
   }
 
   loadVersions() {
     return this.api.getVersions(this.propertyId).pipe(tap((versions) => this.versionsSubject.next(versions)));
-  }
-
-  loadAuditLogs(version: string) {
-    return this.api.getAuditLogs(this.propertyId, version).pipe(tap((logs) => this.auditLogsSubject.next(logs)));
   }
 
   patchDraft(mutator: (draft: PropertyVersion) => PropertyVersion) {
@@ -138,7 +132,6 @@ export class PropertyStoreService {
       tap((saved) => {
         this.persistCollectionUpdate(saved, 'brokers');
       }),
-      switchMap((saved) => this.loadAuditLogs(saved.version).pipe(map(() => saved))),
     );
   }
 
@@ -167,7 +160,6 @@ export class PropertyStoreService {
       tap((saved) => {
         this.persistCollectionUpdate(saved, 'brokers');
       }),
-      switchMap((saved) => this.loadAuditLogs(saved.version).pipe(map(() => saved))),
     );
   }
 
@@ -240,7 +232,6 @@ export class PropertyStoreService {
       tap((saved) => {
         this.persistCollectionUpdate(saved, 'tenants');
       }),
-      switchMap((saved) => this.loadAuditLogs(saved.version).pipe(map(() => saved))),
     );
   }
 
@@ -282,7 +273,6 @@ export class PropertyStoreService {
       tap((saved) => {
         this.persistCollectionUpdate(saved, 'tenants');
       }),
-      switchMap((saved) => this.loadAuditLogs(saved.version).pipe(map(() => saved))),
     );
   }
 
@@ -332,7 +322,7 @@ export class PropertyStoreService {
     };
 
     return this.api.saveVersion(this.propertyId, current.version, payload).pipe(
-      switchMap((saved) => {
+      map((saved) => {
         const normalized = this.normalizePropertySnapshot(saved.data);
         this.persistedProperty = structuredClone(normalized);
         this.propertySubject.next(normalized);
@@ -340,7 +330,7 @@ export class PropertyStoreService {
         this.serverFieldErrorsSubject.next({});
         this.refreshDirtyState();
         this.syncVersionOption(normalized);
-        return this.loadAuditLogs(normalized.version).pipe(map(() => saved));
+        return saved;
       }),
     );
   }
@@ -395,7 +385,6 @@ export class PropertyStoreService {
       switchMap((saved) =>
         this.loadVersions().pipe(
           tap(() => this.syncVersionOption(saved.data)),
-          switchMap(() => this.loadAuditLogs(saved.data.version)),
           map(() => saved),
         ),
       ),

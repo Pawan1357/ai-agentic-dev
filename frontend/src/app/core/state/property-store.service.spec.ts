@@ -114,7 +114,6 @@ describe('PropertyStoreService', () => {
   beforeEach(() => {
     api = jasmine.createSpyObj<PropertyApiService>('PropertyApiService', [
       'getVersion',
-      'getAuditLogs',
       'saveVersion',
       'saveAs',
       'getVersions',
@@ -126,7 +125,6 @@ describe('PropertyStoreService', () => {
       'softDeleteTenant',
     ]);
     api.getVersions.and.returnValue(of([]));
-    api.getAuditLogs.and.returnValue(of([]));
     api.softDeleteBroker.and.returnValue(of(baseProperty));
     api.softDeleteTenant.and.returnValue(of(baseProperty));
     store = new PropertyStoreService(api);
