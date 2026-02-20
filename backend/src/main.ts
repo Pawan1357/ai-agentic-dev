@@ -1,12 +1,19 @@
 import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { ApiExceptionFilter } from './common/filters/api-exception.filter';
 import { HttpLoggingInterceptor } from './common/interceptors/http-logging.interceptor';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { AppLoggerService } from './common/logging/app-logger.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const appLogger = app.get(AppLoggerService);
+  app.useLogger(appLogger);
+  const configService = app.get(ConfigService);
+  app.use(helmet());
   app.enableCors({
     origin: ['http://localhost:4200', 'http://127.0.0.1:4200'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -22,9 +29,9 @@ async function bootstrap() {
       stopAtFirstError: true,
     }),
   );
-  app.useGlobalInterceptors(new HttpLoggingInterceptor(), new ResponseInterceptor());
-  app.useGlobalFilters(new ApiExceptionFilter());
-  await app.listen(process.env.PORT ? Number(process.env.PORT) : 3000);
+  app.useGlobalInterceptors(new HttpLoggingInterceptor(appLogger), new ResponseInterceptor());
+  app.useGlobalFilters(new ApiExceptionFilter(appLogger));
+  await app.listen(configService.get<number>('PORT', 3000));
 }
 
 bootstrap();

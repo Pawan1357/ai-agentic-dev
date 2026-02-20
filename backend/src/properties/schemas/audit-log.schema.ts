@@ -17,10 +17,10 @@ class AuditChange {
 
 @Schema({ collection: 'audit_logs', timestamps: true })
 export class AuditLog {
-  @Prop({ required: true })
+  @Prop({ required: true, index: true })
   propertyId!: string;
 
-  @Prop({ required: true })
+  @Prop({ required: true, index: true })
   version!: string;
 
   @Prop({ required: true })
@@ -40,3 +40,4 @@ export class AuditLog {
 }
 
 export const AuditLogSchema = SchemaFactory.createForClass(AuditLog);
+AuditLogSchema.index({ propertyId: 1, version: 1, createdAt: -1 });

@@ -6,7 +6,7 @@
     </nav>
 
     <div class="actions">
-      <select class="version-select" [value]="property.version" (change)="onVersionChange($any($event.target).value, $event)">
+      <select #versionSelect class="version-select" [value]="property.version" (change)="onVersionChange(versionSelect.value, $event)">
         <option *ngFor="let item of store.versions$ | async" [value]="item.version">
           {{ item.version }}{{ item.isHistorical ? ' (Historical)' : '' }}
         </option>
@@ -31,6 +31,35 @@
   <main>
     <router-outlet></router-outlet>
   </main>
+
+  <section class="history-card">
+    <h3>Change History</h3>
+    <div class="history-empty" *ngIf="(store.auditLogs$ | async)?.length === 0">No history entries for this version yet.</div>
+    <div class="history-table-wrap" *ngIf="(store.auditLogs$ | async) as logs">
+      <table *ngIf="logs.length > 0">
+        <thead>
+          <tr>
+            <th>When</th>
+            <th>Action</th>
+            <th>User</th>
+            <th>Fields Updated</th>
+            <th>Changes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let log of logs; trackBy: trackByAuditLog">
+            <td>{{ log.createdAt | date: 'M/d/y, h:mm a' }}</td>
+            <td>{{ log.action }}</td>
+            <td>{{ log.updatedBy }}</td>
+            <td>{{ log.changedFieldCount }}</td>
+            <td class="changes-cell">
+              <div *ngFor="let change of log.changes">{{ formatAuditChange(change) }}</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 </div>
 
 <div class="app-shell loading-shell" *ngIf="!(store.property$ | async)">

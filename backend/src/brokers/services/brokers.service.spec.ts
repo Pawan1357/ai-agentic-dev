@@ -1,6 +1,15 @@
 import { BrokersService } from './brokers.service';
 
 describe('BrokersService', () => {
+  const createSession = () => ({
+    withTransaction: async (callback: () => Promise<void>) => callback(),
+    endSession: jest.fn().mockResolvedValue(undefined),
+  });
+
+  const connection = {
+    startSession: jest.fn().mockResolvedValue(createSession()),
+  } as any;
+
   const propertyRepository = {
     findOne: jest.fn(),
     saveCurrentVersionAtomic: jest.fn(),
@@ -16,7 +25,7 @@ describe('BrokersService', () => {
     create: jest.fn(),
   } as any;
 
-  const service = new BrokersService(propertyRepository, brokerRepository, tenantRepository, auditRepository);
+  const service = new BrokersService(connection, propertyRepository, brokerRepository, tenantRepository, auditRepository);
 
   const baseEntity = {
     _id: 'ver-1',
@@ -42,6 +51,7 @@ describe('BrokersService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    connection.startSession.mockResolvedValue(createSession());
     propertyRepository.findOne.mockResolvedValue(baseEntity);
     propertyRepository.saveCurrentVersionAtomic.mockResolvedValue({ ...baseEntity, revision: 3, toObject: () => ({ ...baseEntity, revision: 3 }) });
     brokerRepository.listByPropertyVersionId.mockResolvedValue(brokers);

@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, HttpCode, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
+import { Roles } from '../../common/auth/roles.decorator';
 import { UpsertTenantDto } from '../dto/tenant.dto';
 import { TenantsService } from '../services/tenants.service';
 
@@ -7,6 +8,7 @@ export class TenantsController {
   constructor(private readonly tenantsService: TenantsService) {}
 
   @Post(':propertyId/versions/:version/tenants')
+  @Roles('admin', 'analyst')
   createTenant(
     @Param('propertyId') propertyId: string,
     @Param('version') version: string,
@@ -17,6 +19,7 @@ export class TenantsController {
   }
 
   @Put(':propertyId/versions/:version/tenants/:tenantId')
+  @Roles('admin', 'analyst')
   updateTenant(
     @Param('propertyId') propertyId: string,
     @Param('version') version: string,
@@ -29,6 +32,7 @@ export class TenantsController {
 
   @Delete(':propertyId/versions/:version/tenants/:tenantId')
   @HttpCode(200)
+  @Roles('admin', 'analyst')
   softDeleteTenant(
     @Param('propertyId') propertyId: string,
     @Param('version') version: string,

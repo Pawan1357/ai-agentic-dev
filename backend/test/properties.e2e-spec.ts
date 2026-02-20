@@ -6,6 +6,7 @@ import { AppModule } from '../src/app.module';
 import { ApiExceptionFilter } from '../src/common/filters/api-exception.filter';
 import { HttpLoggingInterceptor } from '../src/common/interceptors/http-logging.interceptor';
 import { ResponseInterceptor } from '../src/common/interceptors/response.interceptor';
+import { AppLoggerService } from '../src/common/logging/app-logger.service';
 
 describe('PropertiesController (e2e)', () => {
   let app: INestApplication;
@@ -21,8 +22,9 @@ describe('PropertiesController (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     app.setGlobalPrefix('api');
-    app.useGlobalInterceptors(new HttpLoggingInterceptor(), new ResponseInterceptor());
-    app.useGlobalFilters(new ApiExceptionFilter());
+    const logger = app.get(AppLoggerService);
+    app.useGlobalInterceptors(new HttpLoggingInterceptor(logger), new ResponseInterceptor());
+    app.useGlobalFilters(new ApiExceptionFilter(logger));
     await app.init();
   });
 

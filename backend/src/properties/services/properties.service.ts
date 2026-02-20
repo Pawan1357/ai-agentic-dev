@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { InjectConnection } from '@nestjs/mongoose';
+import { ClientSession, Connection } from 'mongoose';
 import { BrokerDto } from '../../brokers/dto/broker.dto';
 import { BrokerRepository } from '../../brokers/repositories/broker.repository';
 import { AppException } from '../../common/exceptions/app.exception';
@@ -17,6 +19,7 @@ const VACANT_TENANT_ID = 'vacant-row';
 @Injectable()
 export class PropertiesService {
   constructor(
+    @InjectConnection() private readonly connection: Connection,
     private readonly propertyRepository: PropertyRepository,
     private readonly auditRepository: AuditLogRepository,
     private readonly brokerRepository: BrokerRepository,
@@ -40,111 +43,148 @@ export class PropertiesService {
   }
 
   async saveCurrentVersion(propertyId: string, version: string, dto: SavePropertyVersionDto): Promise<any> {
-    const existingCore = await this.assertEditableVersion(propertyId, version);
-    const existing = await this.composeVersionResponse(existingCore);
+    return this.runInTransaction(async (session) => {
+      const existingCore = await this.assertEditableVersion(propertyId, version, session);
+      const existing = await this.composeVersionResponse(existingCore, session);
 
-    if (existing.propertyDetails.address !== dto.propertyDetails.address) {
-      throw new AppException('Property address is read-only', 'VALIDATION');
-    }
-    this.validateSavePayloadIntegrity(dto.brokers, dto.tenants);
+      if (existing.propertyDetails.address !== dto.propertyDetails.address) {
+        throw new AppException('Property address is read-only', 'VALIDATION');
+      }
+      this.validateSavePayloadIntegrity(dto.brokers, dto.tenants);
 
-    const normalizedTenants = this.normalizeTenants(dto.tenants, dto.propertyDetails.buildingSizeSf);
-    this.validateBusinessRules(
-      dto.propertyDetails.buildingSizeSf,
-      dto.underwritingInputs.estStartDate,
-      dto.underwritingInputs.holdPeriodYears,
-      normalizedTenants,
-    );
+      const normalizedTenants = this.normalizeTenants(dto.tenants, dto.propertyDetails.buildingSizeSf);
+      this.validateBusinessRules(
+        dto.propertyDetails.buildingSizeSf,
+        dto.underwritingInputs.estStartDate,
+        dto.underwritingInputs.holdPeriodYears,
+        normalizedTenants,
+      );
 
-    const payload = {
-      propertyDetails: dto.propertyDetails,
-      underwritingInputs: dto.underwritingInputs,
-      updatedBy: MOCK_USER,
-    };
+      const payload = {
+        propertyDetails: dto.propertyDetails,
+        underwritingInputs: dto.underwritingInputs,
+        updatedBy: MOCK_USER,
+      };
 
-    const updatedCore = await this.propertyRepository.saveCurrentVersionAtomic(propertyId, version, dto.expectedRevision, payload);
-    if (!updatedCore) {
-      throw new AppException('Revision mismatch detected. Reload latest data.', 'CONFLICT');
-    }
+      const updatedCore = await this.propertyRepository.saveCurrentVersionAtomic(
+        propertyId,
+        version,
+        dto.expectedRevision,
+        payload,
+        session,
+      );
+      if (!updatedCore) {
+        throw new AppException('Revision mismatch detected. Reload latest data.', 'CONFLICT');
+      }
 
-    await this.brokerRepository.replaceByPropertyVersionId(updatedCore._id, propertyId, version, this.normalizeBrokers(dto.brokers) as any);
-    await this.tenantRepository.replaceByPropertyVersionId(updatedCore._id, propertyId, version, normalizedTenants as any);
+      await this.brokerRepository.replaceByPropertyVersionId(
+        updatedCore._id,
+        propertyId,
+        version,
+        this.normalizeBrokers(dto.brokers) as any,
+        session,
+      );
+      await this.tenantRepository.replaceByPropertyVersionId(updatedCore._id, propertyId, version, normalizedTenants as any, session);
 
-    const updated = await this.composeVersionResponse(updatedCore);
+      const updated = await this.composeVersionResponse(updatedCore, session);
 
-    const changes = buildDiff(
-      {
-        propertyDetails: existing.propertyDetails,
-        underwritingInputs: existing.underwritingInputs,
-        brokers: existing.brokers,
-        tenants: existing.tenants,
-      },
-      {
-        propertyDetails: updated.propertyDetails,
-        underwritingInputs: updated.underwritingInputs,
-        brokers: updated.brokers,
-        tenants: updated.tenants,
-      },
-    );
+      const changes = buildDiff(
+        {
+          propertyDetails: existing.propertyDetails,
+          underwritingInputs: existing.underwritingInputs,
+          brokers: existing.brokers,
+          tenants: existing.tenants,
+        },
+        {
+          propertyDetails: updated.propertyDetails,
+          underwritingInputs: updated.underwritingInputs,
+          brokers: updated.brokers,
+          tenants: updated.tenants,
+        },
+      );
 
-    await this.auditRepository.create({
-      propertyId,
-      version,
-      revision: updatedCore.revision,
-      updatedBy: MOCK_USER,
-      action: 'UPDATE_VERSION',
-      changes,
-      changedFieldCount: changes.length,
+      await this.auditRepository.create(
+        {
+          propertyId,
+          version,
+          revision: updatedCore.revision,
+          updatedBy: MOCK_USER,
+          action: 'UPDATE_VERSION',
+          changes,
+          changedFieldCount: changes.length,
+        },
+        session,
+      );
+
+      return updated;
     });
-
-    return updated;
   }
 
   async saveAsNextVersion(propertyId: string, sourceVersion: string, dto: SaveAsVersionDto): Promise<any> {
-    const sourceCore = await this.propertyRepository.findOne(propertyId, sourceVersion);
-    if (!sourceCore) {
-      throw new AppException('Property version not found', 'NOT_FOUND');
-    }
-    if (sourceCore.revision !== dto.expectedRevision) {
-      throw new AppException('Revision mismatch detected. Reload latest data.', 'CONFLICT');
-    }
+    return this.runInTransaction(async (session) => {
+      const sourceCore = await this.propertyRepository.findOne(propertyId, sourceVersion, session);
+      if (!sourceCore) {
+        throw new AppException('Property version not found', 'NOT_FOUND');
+      }
+      if (sourceCore.revision !== dto.expectedRevision) {
+        throw new AppException('Revision mismatch detected. Reload latest data.', 'CONFLICT');
+      }
 
-    const source = await this.composeVersionResponse(sourceCore);
-    const saveAsSnapshot = this.resolveSaveAsSnapshot(source, dto);
-    const nextVersion = await this.resolveNextVersion(propertyId);
-    await this.propertyRepository.markLatestAsHistorical(propertyId);
+      const source = await this.composeVersionResponse(sourceCore, session);
+      const saveAsSnapshot = this.resolveSaveAsSnapshot(source, dto);
+      const nextVersion = await this.resolveNextVersion(propertyId, session);
+      await this.propertyRepository.markLatestAsHistorical(propertyId, session);
 
-    const createdCore = await this.propertyRepository.create({
-      propertyId,
-      version: nextVersion,
-      isLatest: true,
-      isHistorical: false,
-      revision: 0,
-      propertyDetails: saveAsSnapshot.propertyDetails,
-      underwritingInputs: saveAsSnapshot.underwritingInputs,
-      updatedBy: MOCK_USER,
+      const createdCore = await this.propertyRepository.create(
+        {
+          propertyId,
+          version: nextVersion,
+          isLatest: true,
+          isHistorical: false,
+          revision: 0,
+          propertyDetails: saveAsSnapshot.propertyDetails,
+          underwritingInputs: saveAsSnapshot.underwritingInputs,
+          updatedBy: MOCK_USER,
+        },
+        session,
+      );
+
+      await this.brokerRepository.replaceByPropertyVersionId(
+        createdCore._id,
+        propertyId,
+        nextVersion,
+        saveAsSnapshot.brokers as any,
+        session,
+      );
+      await this.tenantRepository.replaceByPropertyVersionId(
+        createdCore._id,
+        propertyId,
+        nextVersion,
+        saveAsSnapshot.tenants as any,
+        session,
+      );
+
+      await this.auditRepository.create(
+        {
+          propertyId,
+          version: nextVersion,
+          revision: 0,
+          updatedBy: MOCK_USER,
+          action: 'SAVE_AS',
+          changes: [{ field: 'version', oldValue: sourceVersion, newValue: nextVersion }],
+          changedFieldCount: 1,
+        },
+        session,
+      );
+
+      return this.composeVersionResponse(createdCore, session);
     });
-
-    await this.brokerRepository.replaceByPropertyVersionId(createdCore._id, propertyId, nextVersion, saveAsSnapshot.brokers as any);
-    await this.tenantRepository.replaceByPropertyVersionId(createdCore._id, propertyId, nextVersion, saveAsSnapshot.tenants as any);
-
-    await this.auditRepository.create({
-      propertyId,
-      version: nextVersion,
-      revision: 0,
-      updatedBy: MOCK_USER,
-      action: 'SAVE_AS',
-      changes: [{ field: 'version', oldValue: sourceVersion, newValue: nextVersion }],
-      changedFieldCount: 1,
-    });
-
-    return this.composeVersionResponse(createdCore);
   }
 
-  private async composeVersionResponse(entity: any): Promise<any> {
+  private async composeVersionResponse(entity: any, session?: ClientSession): Promise<any> {
     const [brokers, tenants] = await Promise.all([
-      this.brokerRepository.listByPropertyVersionId(entity._id),
-      this.tenantRepository.listByPropertyVersionId(entity._id),
+      this.brokerRepository.listByPropertyVersionId(entity._id, session),
+      this.tenantRepository.listByPropertyVersionId(entity._id, session),
     ]);
     const object = typeof entity.toObject === 'function' ? entity.toObject() : entity;
     const fallbackBrokers = Array.isArray(object.brokers) ? object.brokers : [];
@@ -195,8 +235,8 @@ export class PropertiesService {
     };
   }
 
-  private async resolveNextVersion(propertyId: string): Promise<string> {
-    const versions = await this.propertyRepository.listVersions(propertyId);
+  private async resolveNextVersion(propertyId: string, session?: ClientSession): Promise<string> {
+    const versions = await this.propertyRepository.listVersions(propertyId, session);
     if (versions.length === 0) {
       throw new AppException('Cannot create next version for unknown property', 'NOT_FOUND');
     }
@@ -246,6 +286,10 @@ export class PropertiesService {
         throw new AppException('Lease start cannot be before property start', 'VALIDATION');
       }
 
+      if (leaseEnd < leaseStart) {
+        throw new AppException('Lease end cannot be before lease start', 'VALIDATION');
+      }
+
       if (leaseEnd > maxLeaseEnd) {
         throw new AppException('Lease end cannot exceed start + hold period', 'VALIDATION');
       }
@@ -280,8 +324,8 @@ export class PropertiesService {
       squareFeet: vacantSf,
       rentPsf: 0,
       annualEscalations: 0,
-      leaseStart: activeRows[0]?.leaseStart ?? new Date().toISOString(),
-      leaseEnd: activeRows[0]?.leaseEnd ?? new Date().toISOString(),
+      leaseStart: activeRows[0]?.leaseStart ?? new Date().toISOString().slice(0, 10),
+      leaseEnd: activeRows[0]?.leaseEnd ?? new Date().toISOString().slice(0, 10),
       leaseType: 'N/A',
       renew: 'N/A',
       downtimeMonths: 0,
@@ -294,8 +338,8 @@ export class PropertiesService {
     return [...activeRows, vacantRow];
   }
 
-  private async assertEditableVersion(propertyId: string, version: string) {
-    const entity = await this.propertyRepository.findOne(propertyId, version);
+  private async assertEditableVersion(propertyId: string, version: string, session?: ClientSession) {
+    const entity = await this.propertyRepository.findOne(propertyId, version, session);
     if (!entity) {
       throw new AppException('Property version not found', 'NOT_FOUND');
     }
@@ -308,5 +352,26 @@ export class PropertiesService {
   private stripMeta(item: any) {
     const { propertyVersionId, propertyId, version, _id, __v, ...rest } = item;
     return rest;
+  }
+
+  private async runInTransaction<T>(handler: (session?: ClientSession) => Promise<T>): Promise<T> {
+    const session = await this.connection.startSession();
+    try {
+      let result: T;
+      try {
+        await session.withTransaction(async () => {
+          result = await handler(session);
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!message.includes('Transaction numbers are only allowed')) {
+          throw error;
+        }
+        result = await handler();
+      }
+      return result!;
+    } finally {
+      await session.endSession();
+    }
   }
 }

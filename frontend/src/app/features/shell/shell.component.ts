@@ -1,5 +1,6 @@
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
-import { switchMap } from 'rxjs';
+import { Subject, switchMap, takeUntil } from 'rxjs';
+import { AuditChange, AuditLogEntry } from '../../core/models/property.model';
 import { PropertyStoreService } from '../../core/state/property-store.service';
 import { extractErrorMessage } from '../../core/utils/http-error.util';
 
@@ -15,6 +16,7 @@ export class ShellComponent implements OnInit, OnDestroy {
   private successTimer: ReturnType<typeof setTimeout> | null = null;
   private errorTimer: ReturnType<typeof setTimeout> | null = null;
   private validationTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly destroy$ = new Subject<void>();
 
   constructor(public readonly store: PropertyStoreService) {}
 
@@ -22,6 +24,7 @@ export class ShellComponent implements OnInit, OnDestroy {
     this.store
       .loadVersions()
       .pipe(
+        takeUntil(this.destroy$),
         switchMap((versions) => {
           const selected = versions.find((item) => !item.isHistorical)?.version ?? versions[0]?.version ?? '1.1';
           return this.store.loadVersion(selected);
@@ -35,7 +38,7 @@ export class ShellComponent implements OnInit, OnDestroy {
       },
     });
 
-    this.store.validationErrors$.subscribe((errors) => {
+    this.store.validationErrors$.pipe(takeUntil(this.destroy$)).subscribe((errors) => {
       this.validationErrors = errors;
       if (this.validationTimer) {
         clearTimeout(this.validationTimer);
@@ -48,7 +51,6 @@ export class ShellComponent implements OnInit, OnDestroy {
         }, 4500);
       }
     });
-
   }
 
   @HostListener('window:beforeunload', ['$event'])
@@ -60,6 +62,8 @@ export class ShellComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
     if (this.successTimer) {
       clearTimeout(this.successTimer);
       this.successTimer = null;
@@ -179,5 +183,29 @@ export class ShellComponent implements OnInit, OnDestroy {
       this.errorMessage = '';
       this.errorTimer = null;
     }, 4500);
+  }
+
+  formatAuditChange(change: AuditChange): string {
+    const oldValue = this.stringifyAuditValue(change.oldValue);
+    const newValue = this.stringifyAuditValue(change.newValue);
+    return `${change.field}: ${oldValue} -> ${newValue}`;
+  }
+
+  trackByAuditLog(_index: number, item: AuditLogEntry): string {
+    return `${item.version}-${item.revision}-${item.createdAt}`;
+  }
+
+  private stringifyAuditValue(value: unknown): string {
+    if (value === null || typeof value === 'undefined') {
+      return 'null';
+    }
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return '[unserializable]';
+    }
   }
 }

@@ -114,6 +114,7 @@ describe('PropertyStoreService', () => {
   beforeEach(() => {
     api = jasmine.createSpyObj<PropertyApiService>('PropertyApiService', [
       'getVersion',
+      'getAuditLogs',
       'saveVersion',
       'saveAs',
       'getVersions',
@@ -125,6 +126,7 @@ describe('PropertyStoreService', () => {
       'softDeleteTenant',
     ]);
     api.getVersions.and.returnValue(of([]));
+    api.getAuditLogs.and.returnValue(of([]));
     api.softDeleteBroker.and.returnValue(of(baseProperty));
     api.softDeleteTenant.and.returnValue(of(baseProperty));
     store = new PropertyStoreService(api);
@@ -302,6 +304,37 @@ describe('PropertyStoreService', () => {
     store.loadVersion().subscribe(() => {
       store.addBrokerDraft();
       store.addTenantDraft();
+      store.patchDraft((draft) => {
+        const brokers = [...draft.brokers];
+        const broker = brokers[brokers.length - 1];
+        brokers[brokers.length - 1] = {
+          ...broker,
+          name: 'New Broker',
+          phone: '1234567890',
+          email: 'new@example.com',
+          company: 'New Co',
+        };
+
+        const nonVacantTenants = draft.tenants.filter((tenant: any) => !tenant.isVacant);
+        const targetTenant = nonVacantTenants[nonVacantTenants.length - 1];
+        const tenants = draft.tenants.map((tenant: any) =>
+          tenant.id === targetTenant.id
+            ? {
+                ...tenant,
+                tenantName: 'New Tenant',
+                squareFeet: 100,
+                leaseStart: '2025-01-02',
+                leaseEnd: '2027-01-01',
+              }
+            : tenant,
+        );
+
+        return {
+          ...draft,
+          brokers,
+          tenants,
+        };
+      });
 
       store.saveCurrent().subscribe(() => {
         const savePayload = api.saveVersion.calls.mostRecent().args[2] as any;

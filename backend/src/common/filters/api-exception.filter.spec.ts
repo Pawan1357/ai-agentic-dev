@@ -1,5 +1,6 @@
 import { ArgumentsHost, BadRequestException, HttpStatus } from '@nestjs/common';
 import { AppException } from '../exceptions/app.exception';
+import { AppLoggerService } from '../logging/app-logger.service';
 import { ApiExceptionFilter } from './api-exception.filter';
 
 describe('ApiExceptionFilter', () => {
@@ -17,7 +18,7 @@ describe('ApiExceptionFilter', () => {
   };
 
   it('maps AppException to structured response', () => {
-    const filter = new ApiExceptionFilter();
+    const filter = new ApiExceptionFilter(new AppLoggerService());
     const { host, status, json } = createHost();
 
     filter.catch(new AppException('conflict', 'CONFLICT', { revision: 1 }), host);
@@ -33,7 +34,7 @@ describe('ApiExceptionFilter', () => {
   });
 
   it('maps HttpException to structured response', () => {
-    const filter = new ApiExceptionFilter();
+    const filter = new ApiExceptionFilter(new AppLoggerService());
     const { host, status, json } = createHost();
 
     filter.catch(new BadRequestException('bad request'), host);
@@ -43,7 +44,7 @@ describe('ApiExceptionFilter', () => {
   });
 
   it('maps unknown errors to internal server response', () => {
-    const filter = new ApiExceptionFilter();
+    const filter = new ApiExceptionFilter(new AppLoggerService());
     const { host, status, json } = createHost();
 
     filter.catch(new Error('boom'), host);
@@ -53,7 +54,7 @@ describe('ApiExceptionFilter', () => {
   });
 
   it('maps mongo duplicate key errors to conflict response', () => {
-    const filter = new ApiExceptionFilter();
+    const filter = new ApiExceptionFilter(new AppLoggerService());
     const { host, status, json } = createHost();
 
     filter.catch({ code: 11000 }, host);

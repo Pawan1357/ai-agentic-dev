@@ -1,15 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { ClientSession, Model, Types } from 'mongoose';
 import { Tenant, TenantDocument } from '../schemas/tenant.schema';
 
 @Injectable()
 export class TenantRepository {
   constructor(@InjectModel(Tenant.name) private readonly model: Model<TenantDocument>) {}
 
-  listByPropertyVersionId(propertyVersionId: Types.ObjectId | string) {
+  listByPropertyVersionId(propertyVersionId: Types.ObjectId | string, session?: ClientSession) {
     return this.model
       .find({ propertyVersionId: new Types.ObjectId(String(propertyVersionId)) })
+      .session(session ?? null)
       .sort({ createdAt: 1, _id: 1 })
       .lean();
   }
@@ -19,9 +20,10 @@ export class TenantRepository {
     propertyId: string,
     version: string,
     tenants: Array<Omit<Tenant, 'propertyVersionId' | 'propertyId' | 'version'>>,
+    session?: ClientSession,
   ) {
     const propertyVersionObjectId = new Types.ObjectId(String(propertyVersionId));
-    await this.model.deleteMany({ propertyVersionId: propertyVersionObjectId });
+    await this.model.deleteMany({ propertyVersionId: propertyVersionObjectId }, { session });
     if (tenants.length === 0) {
       return [];
     }
@@ -32,6 +34,7 @@ export class TenantRepository {
         propertyId,
         version,
       })),
+      { session },
     );
   }
 }

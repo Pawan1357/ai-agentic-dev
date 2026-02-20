@@ -1,11 +1,13 @@
-import { ExecutionContext, Logger } from '@nestjs/common';
+import { ExecutionContext } from '@nestjs/common';
 import { of } from 'rxjs';
+import { AppLoggerService } from '../logging/app-logger.service';
 import { HttpLoggingInterceptor } from './http-logging.interceptor';
 
 describe('HttpLoggingInterceptor', () => {
   it('logs incoming and outgoing payloads', (done) => {
-    const interceptor = new HttpLoggingInterceptor();
-    const logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    const logger = new AppLoggerService();
+    const logSpy = jest.spyOn(logger, 'log').mockImplementation();
+    const interceptor = new HttpLoggingInterceptor(logger);
 
     const context = {
       switchToHttp: () => ({

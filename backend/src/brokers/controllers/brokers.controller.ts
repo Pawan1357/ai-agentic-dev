@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, HttpCode, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
+import { Roles } from '../../common/auth/roles.decorator';
 import { UpsertBrokerDto } from '../dto/broker.dto';
 import { BrokersService } from '../services/brokers.service';
 
@@ -7,6 +8,7 @@ export class BrokersController {
   constructor(private readonly brokersService: BrokersService) {}
 
   @Post(':propertyId/versions/:version/brokers')
+  @Roles('admin', 'analyst')
   createBroker(
     @Param('propertyId') propertyId: string,
     @Param('version') version: string,
@@ -17,6 +19,7 @@ export class BrokersController {
   }
 
   @Put(':propertyId/versions/:version/brokers/:brokerId')
+  @Roles('admin', 'analyst')
   updateBroker(
     @Param('propertyId') propertyId: string,
     @Param('version') version: string,
@@ -29,6 +32,7 @@ export class BrokersController {
 
   @Delete(':propertyId/versions/:version/brokers/:brokerId')
   @HttpCode(200)
+  @Roles('admin', 'analyst')
   softDeleteBroker(
     @Param('propertyId') propertyId: string,
     @Param('version') version: string,

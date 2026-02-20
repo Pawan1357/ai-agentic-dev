@@ -89,3 +89,21 @@ export interface PropertyVersion {
   brokers: Broker[];
   tenants: Tenant[];
 }
+
+export interface AuditChange {
+  field: string;
+  oldValue: unknown;
+  newValue: unknown;
+}
+
+export interface AuditLogEntry {
+  propertyId: string;
+  version: string;
+  revision: number;
+  updatedBy: string;
+  action: string;
+  changes: AuditChange[];
+  changedFieldCount: number;
+  createdAt: string;
+  updatedAt: string;
+}

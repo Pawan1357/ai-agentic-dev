@@ -134,3 +134,49 @@ main {
   color: var(--muted);
   font-size: 14px;
 }
+
+.history-card {
+  margin: 0 16px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 14px;
+}
+
+.history-card h3 {
+  margin: 0 0 10px;
+}
+
+.history-empty {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.history-table-wrap {
+  overflow: auto;
+}
+
+.history-card table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.history-card th,
+.history-card td {
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  padding: 8px;
+  font-size: 12px;
+  vertical-align: top;
+}
+
+.history-card th {
+  background: #f7faff;
+  font-weight: 600;
+}
+
+.changes-cell div {
+  white-space: pre-wrap;
+  margin-bottom: 4px;
+}

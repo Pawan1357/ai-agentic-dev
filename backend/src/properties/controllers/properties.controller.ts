@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
+import { Roles } from '../../common/auth/roles.decorator';
 import { SaveAsVersionDto } from '../dto/save-as-version.dto';
 import { SavePropertyVersionDto } from '../dto/save-property-version.dto';
 import { PropertiesService } from '../services/properties.service';
@@ -23,6 +24,7 @@ export class PropertiesController {
   }
 
   @Put(':propertyId/versions/:version')
+  @Roles('admin', 'analyst')
   saveCurrentVersion(
     @Param('propertyId') propertyId: string,
     @Param('version') version: string,
@@ -32,6 +34,7 @@ export class PropertiesController {
   }
 
   @Post(':propertyId/versions/:version/save-as')
+  @Roles('admin', 'analyst')
   saveAsNextVersion(
     @Param('propertyId') propertyId: string,
     @Param('version') version: string,

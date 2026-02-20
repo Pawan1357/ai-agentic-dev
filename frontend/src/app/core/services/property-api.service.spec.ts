@@ -30,6 +30,15 @@ describe('PropertyApiService', () => {
     });
   });
 
+  it('gets audit logs and unwraps response envelope', (done) => {
+    http.get.and.returnValue(of({ success: true, data: [{ action: 'UPDATE_VERSION' }] }));
+    service.getAuditLogs('property-1', '1.1').subscribe((logs) => {
+      expect(http.get).toHaveBeenCalledWith('/api/properties/property-1/versions/1.1/audit-logs');
+      expect((logs[0] as any).action).toBe('UPDATE_VERSION');
+      done();
+    });
+  });
+
   it('saves a version and unwraps response envelope', (done) => {
     http.put.and.returnValue(of({ success: true, message: 'Saved ok', data: { version: '1.1' } }));
     service.saveVersion('property-1', '1.1', { expectedRevision: 1 }).subscribe((saved) => {

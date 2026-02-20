@@ -112,7 +112,6 @@ Error shape:
 Detailed API examples:
 
 - `../docs/API.md`
-- Postman: `../docs/postman/FinalAssessment2.postman_collection.json`
 
 ## Business Flow
 

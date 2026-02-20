@@ -1,0 +1,123 @@
+const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+
+const STATE_FILE = '.agent-state.json';
+const APPROVED_FLAG = 'APPROVED.flag';
+const MAX_LOOPS = 5;
+const PROJECT_ROOT = process.cwd();
+
+function runCodex(promptFile, sandboxMode) {
+  console.log(`Executing Codex with ${promptFile}`);
+  const prompt = fs.readFileSync(promptFile, 'utf-8');
+
+  // Escape quotes safely
+  // const escapedPrompt = prompt.replace(/"/g, '\\"');
+
+  // execSync(
+  //   `codex exec \
+  //     --sandbox workspace-write \
+  //     --ask-for-approval never \
+  //     -C "${PROJECT_ROOT}"`,
+  //   {
+  //     input: prompt,
+  //     stdio: ['pipe', 'inherit', 'inherit'],
+  //     maxBuffer: 1024 * 1024 * 20,
+  //   },
+  // );
+
+  execSync(
+    `codex exec \
+      --sandbox ${sandboxMode} \
+      -C "${PROJECT_ROOT}"`,
+    {
+      input: prompt,
+      stdio: ['pipe', 'inherit', 'inherit'],
+      maxBuffer: 1024 * 1024 * 20,
+      env: process.env,
+    },
+  );
+}
+
+// function run(cmd) {
+//   return execSync(cmd, { stdio: 'inherit' });
+// }
+
+function loadState() {
+  if (!fs.existsSync(STATE_FILE)) {
+    return { lastActor: 'Reviewer', loopCount: 0 };
+  }
+  return JSON.parse(fs.readFileSync(STATE_FILE));
+}
+
+function saveState(state) {
+  fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+}
+
+function resetState() {
+  if (fs.existsSync(STATE_FILE)) fs.unlinkSync(STATE_FILE);
+}
+
+// function runAgent(promptFile, actor) {
+//   console.log(`\n===== Running ${actor.toUpperCase()} Agent =====\n`);
+//   // run(`codex -f ${promptFile}`);
+//   run(`codex run --non-interactive < ${promptFile}`);
+// }
+
+function main() {
+  // if (process.env.SKIP_AGENT === 'true') {
+  //   process.exit(0);
+  // }
+
+  if (fs.existsSync(APPROVED_FLAG)) {
+    console.log('Project already approved. Skipping agents.');
+    resetState();
+    process.exit(0);
+  }
+
+  let state = loadState();
+
+  if (state.loopCount >= MAX_LOOPS) {
+    console.log('Max loop count reached. Aborting to prevent infinite loop.');
+    resetState();
+    process.exit(1);
+  }
+
+  const nextActor = state.lastActor === 'Dev' ? 'Reviewer' : 'Dev';
+
+  const promptFile =
+    nextActor === 'Dev'
+      ? path.join('agent', 'developer.prompt.txt')
+      : path.join('agent', 'reviewer.prompt.txt');
+
+  const sandboxMode = nextActor === 'Dev' ? 'danger-full-access' : 'read-only';
+
+  console.log(`\n===== Running ${nextActor.toUpperCase()} Agent =====\n`);
+
+  try {
+    runCodex(promptFile, sandboxMode);
+  } catch (err) {
+    console.error('Codex execution failed.');
+    resetState();
+    process.exit(1);
+  }
+
+  // runAgent(promptFile, nextActor);
+  // runCodex(promptFile);
+
+  state.lastActor = nextActor;
+  state.loopCount += 1;
+  saveState(state);
+
+  console.log(`Loop count: ${state.loopCount}`);
+
+  // Continue loop automatically unless approved
+  if (!fs.existsSync(APPROVED_FLAG)) {
+    main();
+  } else {
+    console.log('Approval detected. Loop complete.');
+    resetState();
+  }
+}
+
+main();

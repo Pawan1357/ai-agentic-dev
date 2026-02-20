@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { ApiSuccessResponse } from '../models/api-response.model';
-import { Broker, PropertyVersion, Tenant } from '../models/property.model';
+import { AuditLogEntry, Broker, PropertyVersion, Tenant } from '../models/property.model';
 import { environment } from '../../../environments/environment';
 
 export interface ApiMutationResult<T> {
@@ -35,6 +35,14 @@ export class PropertyApiService {
       .get<
         ApiSuccessResponse<PropertyVersion>
       >(`${this.baseUrl}/${propertyId}/versions/${version}`)
+      .pipe(map((response) => response.data));
+  }
+
+  getAuditLogs(propertyId: string, version: string): Observable<AuditLogEntry[]> {
+    return this.http
+      .get<
+        ApiSuccessResponse<AuditLogEntry[]>
+      >(`${this.baseUrl}/${propertyId}/versions/${version}/audit-logs`)
       .pipe(map((response) => response.data));
   }
 
